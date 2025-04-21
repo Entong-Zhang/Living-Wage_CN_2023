@@ -1,0 +1,29 @@
+import pandas as pd
+
+def classify_city(city):
+    first_tier = {"北京", "上海", "广州", "深圳"}
+    second_tier = {"天津", "石家庄", "太原", "呼和浩特", "沈阳", "大连", "长春", "哈尔滨", "南京", "杭州", "宁波", "合肥", "福州", "厦门", "南昌", "济南", "青岛", "郑州", "武汉", "长沙", "南宁", "海口", "重庆", "成都", "贵阳", "昆明", "西安", "兰州", "西宁", "银川", "乌鲁木齐"}
+    third_tier = {"唐山", "秦皇岛", "包头", "丹东", "锦州", "吉林", "牡丹江", "无锡", "徐州", "扬州", "温州", "金华", "蚌埠", "安庆", "泉州", "九江", "赣州", "烟台", "济宁", "洛阳", "平顶山", "宜昌", "襄阳", "岳阳", "常德", "韶关", "湛江", "惠州", "桂林", "北海", "三亚", "泸州", "南充", "遵义", "大理"}
+    
+    if city in first_tier:
+        return "一线城市"
+    elif city in second_tier:
+        return "二线城市"
+    elif city in third_tier:
+        return "三线城市"
+    else:
+        return "未分类"
+
+# 读取Excel文件，假设文件名为 data.xlsx
+path="C:\\Users\\bryennt\\Documents大创2024ver\\平台经济治理\\数据\\housing\\住房价格_禧泰_原始数据.xlsx"
+df = pd.read_excel(path)
+
+# 仅筛选需要的城市
+df["城市类别"] = df["城市"].apply(classify_city)
+filtered_df = df[df["城市类别"] != "未分类"]
+
+# 输出到桌面
+output_path = "C:\\Users\\bryennt\\Desktop\\filtered_cities.xlsx"
+filtered_df.to_excel(output_path, index=False)
+
+print(f"筛选完成，数据已保存到 {output_path}")
