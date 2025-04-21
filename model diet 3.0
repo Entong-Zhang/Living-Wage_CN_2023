@@ -1,0 +1,83 @@
+import pandas as pd
+from scipy.optimize import linprog
+
+path = "C:\\Users\\bryennt\\Desktop\\food.xlsx"
+df = pd.read_excel(path)
+
+region_data = df.groupby('地区')
+
+def optimize(region_data):
+    print(f"优化的地区: {region_data['地区'].iloc[0]}")  # 输出当前地区
+    print(f"列索引: {region_data.columns}")  # 输出当前地区的列索引
+    # 检查是否存在空值或缺失列
+    if region_data.isnull().any().any():
+        print("数据中存在缺失值，请检查!")
+        return None
+    try:
+        # 使用列名而不是位置索引
+        region_food_types = region_data['食品种类'].values  # 获取食品种类
+        region_consumption = region_data['消费量'].values  # 获取消费量
+        region_calories = region_data['热量'].values  # 获取热量
+        region_protein = region_data['蛋白质'].values  # 获取蛋白质
+        region_fat = region_data['脂肪'].values  # 获取脂肪
+        region_carbohydrate = region_data['碳水化合物'].values  # 获取碳水化合物
+    except IndexError as e:
+        print(f"索引错误: {e}")
+        return None
+    target_calories = 2407  # 目标卡路里
+    total_mass = sum(region_protein) + sum(region_fat) + sum(region_carbohydrate)
+    A = []  # 不等式约束矩阵
+    b = []  # 不等式约束向量
+    fruit_vegetables_idx = [
+    region_data[region_data['食品种类'] == "鲜瓜果"].index[0],  # 获取 "鲜瓜果" 在食品种类列中的位置
+    region_data[region_data['食品种类'] == "蔬菜及食用菌"].index[0]  # 获取 "蔬菜及食用菌" 在食品种类列中的位置
+]
+    A.append([1 if i in fruit_vegetables_idx else 0 for i in range(len(region_food_types))])
+    b.append(375)
+    A.append([-1 if i in fruit_vegetables_idx else 0 for i in range(len(region_food_types))])
+    b.append(-350)
+    milk_idx = region_data[region_data['食品种类'] == "奶类"].index[0]
+    A.append([1 if i == milk_idx else 0 for i in range(len(region_food_types))])
+    b.append(0.02 * sum(region_consumption))
+    sugar_idx = region_data[region_data['食品种类'] == "食糖"].index[0]
+    A.append([1 if i == sugar_idx else 0 for i in range(len(region_food_types))])
+    b.append(0.05 * sum(region_consumption))
+    A.append([region_protein[i] for i in range(len(region_food_types))])  
+    b.append(0.10 * total_mass)
+    A.append([-region_protein[i] for i in range(len(region_food_types))])
+    b.append(-0.15 * total_mass)
+    A.append([region_fat[i] for i in range(len(region_food_types))])  
+    b.append(0.12 * total_mass)
+    A.append([-region_fat[i] for i in range(len(region_food_types))])
+    b.append(-0.14 * total_mass)
+    A_eq = [region_calories[i] for i in range(len(region_food_types))]
+    b_eq = [target_calories]
+    bounds = [(0, None)] * len(region_food_types)
+    result = linprog(c=[0] * len(region_food_types),  
+                      A_ub=A, b_ub=b,
+                      A_eq=[A_eq], b_eq=b_eq,
+                      bounds=bounds, method='highs')
+    if result.success:
+        print(f"地区 {region_data['地区'].iloc[0]} 优化成功!")
+        return result.x
+    else:
+        print(f"地区 {region_data['地区'].iloc[0]} 优化失败:", result.message)
+        return None
+
+adjusted_consumption = pd.DataFrame()
+
+region_data = data.groupby('地区')
+
+for region, group in region_data:
+    print(f"地区: {region}，列数: {len(group.columns)}")
+    if len(group.columns) < 6:
+        print(f"警告: {region} 数据列数不足，跳过此地区.")
+        continue
+    region_result = optimize(group)
+    if region_result is not None:
+        group['调整后消费量'] = region_result
+        adjusted_consumption = pd.concat([adjusted_consumption, group], ignore_index=True)
+
+output_path = "C:\\Users\\bryennt\\Desktop\\adjusted_food_data_by_region.xlsx"
+adjusted_consumption.to_excel(output_path, index=False)
+print(f"调整后的数据已保存到: {output_path}")
