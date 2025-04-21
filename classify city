@@ -14,7 +14,7 @@ def classify_city(city):
     else:
         return "未分类"
 
-# 读取Excel文件，假设文件名为 data.xlsx
+# 读取Excel文件
 path="C:\\Users\\bryennt\\Documents大创2024ver\\平台经济治理\\数据\\housing\\住房价格_禧泰_原始数据.xlsx"
 df = pd.read_excel(path)
 
