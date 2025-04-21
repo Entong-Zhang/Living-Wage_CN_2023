@@ -1,0 +1,60 @@
+import pandas as pd
+
+# 从xlsx文件中读取数据
+path = "C:\\Users\\bryennt\\Desktop\\food.xlsx"
+df = pd.read_excel(path)
+
+# 设置一人户和非一人户家庭每日热量需求
+one_person_calories = 2665  # 一人户热量需求
+non_one_person_calories = 2407  # 非一人户热量需求
+
+# 假设目标营养占比
+target_protein_percentage = 0.12  # 蛋白质占总热量的12%
+target_fat_percentage = 0.12      # 脂肪占总热量的12%
+target_vegetables_g = 350         # 水果蔬菜总质量350g
+target_vegetables_percentage = 0.15  # 目标蔬菜占比
+target_fruits_percentage = 0.10    # 目标水果占比
+target_dairy_percentage = 0.02    # 乳制品占比
+target_sugar_percentage = 0.05    # 食糖占比
+target_bean_products_g = 56       # 豆制品最大摄入56g
+target_oil_fat_percentage = 0.12  # 食用油和脂肪占总热量12%
+
+# 计算总热量
+total_calories = df['食物热量 (千卡)'].sum()
+
+# 计算每种食物的热量比例
+df['热量比例'] = df['食物热量 (千卡)'] / total_calories
+
+# 计算一人户和非一人户家庭所需的食物消费量（按比例调整）
+df['一人户消费量 (g)'] = df['热量比例'] * one_person_calories / df['食物热量 (千卡)'] * df['单位消费量']
+df['非一人户消费量 (g)'] = df['热量比例'] * non_one_person_calories / df['食物热量 (千卡)'] * df['单位消费量']
+
+# 调整一人户和非一人户的蛋白质摄入：确保蛋白质占比为目标百分比
+df['一人户调整蛋白质 (g)'] = df['蛋白质 (g)'] * target_protein_percentage * one_person_calories / 4  # 每克蛋白质热量为4卡
+df['非一人户调整蛋白质 (g)'] = df['蛋白质 (g)'] * target_protein_percentage * non_one_person_calories / 4
+
+# 调整一人户和非一人户的脂肪摄入：确保脂肪占比为目标百分比
+df['一人户调整脂肪 (g)'] = df['脂肪 (g)'] * target_fat_percentage * one_person_calories / 9  # 每克脂肪热量为9卡
+df['非一人户调整脂肪 (g)'] = df['脂肪 (g)'] * target_fat_percentage * non_one_person_calories / 9
+
+# 调整一人户和非一人户的碳水化合物：根据热量差异计算，确保摄入的碳水化合物能占足够热量
+df['一人户调整碳水化合物 (g)'] = df['碳水化合物 (g)'] * (one_person_calories - df['一人户调整蛋白质 (g)'] * 4 - df['一人户调整脂肪 (g)'] * 9) / (df['碳水化合物 (g)'] * 4)
+df['非一人户调整碳水化合物 (g)'] = df['碳水化合物 (g)'] * (non_one_person_calories - df['非一人户调整蛋白质 (g)'] * 4 - df['非一人户调整脂肪 (g)'] * 9) / (df['碳水化合物 (g)'] * 4)
+
+# 校正负值，确保调整后的摄入量合理
+df['一人户调整蛋白质 (g)'] = df['一人户调整蛋白质 (g)'].apply(lambda x: max(x, 0))
+df['非一人户调整蛋白质 (g)'] = df['非一人户调整蛋白质 (g)'].apply(lambda x: max(x, 0))
+df['一人户调整脂肪 (g)'] = df['一人户调整脂肪 (g)'].apply(lambda x: max(x, 0))
+df['非一人户调整脂肪 (g)'] = df['非一人户调整脂肪 (g)'].apply(lambda x: max(x, 0))
+df['一人户调整碳水化合物 (g)'] = df['一人户调整碳水化合物 (g)'].apply(lambda x: max(x, 0))
+df['非一人户调整碳水化合物 (g)'] = df['非一人户调整碳水化合物 (g)'].apply(lambda x: max(x, 0))
+
+# 输出最终调整后的结果
+result = df[['地区', '食品类别', '一人户消费量 (g)', '非一人户消费量 (g)', '一人户调整蛋白质 (g)', '非一人户调整蛋白质 (g)', 
+             '一人户调整脂肪 (g)', '非一人户调整脂肪 (g)', '一人户调整碳水化合物 (g)', '非一人户调整碳水化合物 (g)']]
+
+# 输出为xlsx文件
+output_path = "C:\\Users\\bryennt\\Desktop\\adjusted_food_data.xlsx"
+result.to_excel(output_path, index=False)
+
+print(f"调整后的数据已成功保存至 {output_path}")
