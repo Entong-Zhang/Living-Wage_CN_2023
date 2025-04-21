@@ -1,6 +1,6 @@
 import pandas as pd
 
-# 从xlsx文件中读取数据
+# 读取数据
 path = "C:\\Users\\bryennt\\Desktop\\food.xlsx"
 df = pd.read_excel(path)
 
