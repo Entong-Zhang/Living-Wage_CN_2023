@@ -1,0 +1,93 @@
+import pandas as pd
+import numpy as np
+from scipy.optimize import linprog
+
+# 读取数据
+path = "C:\\Users\\bryennt\\Desktop\\food.xlsx"
+data = pd.read_excel(path)
+
+# 查看数据结构，确保数据格式正确
+print(data.head())
+
+# 将数据按地区分类
+# 假设数据中有一个“地区”列，依据该列分组
+region_data = data.groupby("地区")
+
+# 提取相关数据
+food_types = data['食品种类']
+calories = data['热量']
+protein = data['蛋白质']
+fat = data['脂肪']
+consumption = data['消费量']
+
+# 目标函数是最大化总热量
+c = -calories  # 最大化热量，所以目标函数取负
+
+# 约束条件
+A = []  # 不等式约束矩阵
+b = []  # 不等式约束向量
+
+# 约束1：水果蔬菜质量范围
+fruit_vegetables_idx = [food_types[food_types == "鲜瓜果"].index[0], 
+                        food_types[food_types == "蔬菜及食用菌"].index[0]]
+A.append([1 if i in fruit_vegetables_idx else 0 for i in range(len(food_types))])
+b.append(375)  # 上限
+A.append([-1 if i in fruit_vegetables_idx else 0 for i in range(len(food_types))])
+b.append(-350)  # 下限
+
+# 约束2：乳制品占比要求
+milk_idx = food_types[food_types == "奶类"].index[0]
+A.append([1 if i == milk_idx else 0 for i in range(len(food_types))])
+b.append(0.02 * sum(consumption))  # 至少2%
+
+# 约束3：食糖占比要求
+sugar_idx = food_types[food_types == "食糖"].index[0]
+A.append([1 if i == sugar_idx else 0 for i in range(len(food_types))])
+b.append(0.05 * sum(consumption))  # 最多5%
+
+# 约束4：蛋白质比例要求（10-15%）
+total_calories = sum(calories * consumption)
+A.append([protein[i] for i in range(len(food_types))])
+b.append(0.10 * total_calories)  # 最低蛋白质摄入
+A.append([-protein[i] for i in range(len(food_types))])
+b.append(-0.15 * total_calories)  # 最高蛋白质摄入
+
+# 约束5：油脂摄入比例要求（12-14%）
+A.append([fat[i] for i in range(len(food_types))])
+b.append(0.12 * total_calories)  # 最低油脂摄入
+A.append([-fat[i] for i in range(len(food_types))])
+b.append(-0.14 * total_calories)  # 最高油脂摄入
+
+# 设置消费量的非负约束
+bounds = [(0, None)] * len(food_types)  # 消费量必须非负
+
+# 定义优化函数
+def optimize():
+    result = linprog(c, A_ub=A, b_ub=b, bounds=bounds, method='highs')
+    
+    if result.success:
+        print("优化成功!")
+        return result.x
+    else:
+        print("优化失败:", result.message)
+        return None
+
+# 重试机制
+retry_count = 0
+max_retries = 3  # 设置最多重试次数
+
+adjusted_consumption = None
+while adjusted_consumption is None and retry_count < max_retries:
+    adjusted_consumption = optimize()
+    retry_count += 1
+
+if adjusted_consumption is None:
+    print("多次优化失败，请检查约束条件或优化设置。")
+else:
+    # 将优化后的消费量保存到新的数据框中
+    data['调整后消费量'] = adjusted_consumption
+
+    # 输出到桌面
+output_path = "C:\\Users\\bryennt\\Desktop\\adjusted_food_data_linear.xlsx"
+data.to_excel(output_path, index=False)
+print(f"调整后的数据已保存到: {output_path}")
