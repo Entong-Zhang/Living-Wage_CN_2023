@@ -1,0 +1,24 @@
+import pandas as pd
+
+# 读取“日薪.xlsx”，填补合并单元格带来的 NaN
+daily_wage_df = pd.read_excel(r"C:\Users\bryennt\Desktop\日薪.xlsx")
+daily_wage_df["省份"] = daily_wage_df["省份"].fillna(method="ffill")  # 填充空白省份名
+daily_wage_df["省份"] = daily_wage_df["省份"].str.strip()
+daily_wage_df = daily_wage_df.drop_duplicates(subset="省份", keep="first")
+
+# 读取城市数据
+city_df = pd.read_excel(r"C:\Users\bryennt\Desktop\net_living_wage_single_mul.xlsx")
+city_df["省份"] = city_df["省份"].str.strip()
+
+# 合并和计算
+merged_df = city_df.merge(daily_wage_df, on="省份", how="left")
+merged_df["wage1"] = merged_df["日薪"] * merged_df["multiplier"]
+
+# 确保每个城市只保留第一行数据
+merged_df = merged_df.drop_duplicates(subset=["城市"], keep="first")
+
+# 保存结果
+output_path = r"C:\Users\bryennt\Desktop\net_living_wage_single_wage1.xlsx"
+merged_df.to_excel(output_path, index=False)
+
+print(f"处理完成，结果已保存到：{output_path}")
