@@ -1,1 +1,1 @@
-# Living-Wage_CN_2023
+This repository is set up to save the codes of calculating living wage in different cities in China, which is used for a research on the status quo and goverance pathways of labor problems in platform economy. Also, codes of measuring the effects of goverance pathways and data visualizing are included here.
